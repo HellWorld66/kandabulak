@@ -20,42 +20,48 @@
         <title></title>
     </head>
     <body>
-	<!-- НАЧАЛО ВЕРХНЕГО МЕНЮ -->
+	<!-- НАЧАЛО АДАПТИВНОГО ИСТОРИЧЕСКОГО МЕНЮ И ТАЙЛОВ -->
 <header class="historical-header">
     <div class="header-container">
         <div class="header-logo">
-            <span class="logo-title">Горячие дни Средневолжского края</span>
-            <span class="logo-subtitle">Историко-картографический проект</span>
+            <span class="logo-title">Горячие дни</span>
+            <span class="logo-subtitle">Средневолжского края</span>
         </div>
-        <nav class="header-nav">
-            <a href="#map-section" class="nav-link active">Интерактивная карта</a>
-            <a href="#about-project" class="nav-link" onclick="alert('Проект посвящен переломным событиям в истории Среднего Поволжья.')">О проекте</a>
-            <a href="" target="_blank" class="nav-link">Архивные источники</a>
+        
+        <!-- Кнопка гамбургера для мобильных -->
+        <button class="menu-toggle" id="menu-toggle" aria-label="Открыть меню">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav class="header-nav" id="header-nav">
+            <a href="#" class="nav-link active">Карта</a>
+            <a href="#" class="nav-link" onclick="toggleMenu(); alert('Проект посвящен переломным событиям в истории Среднего Поволжья.')">О проекте</a>
+            <a href="https://samregion.ru" target="_blank" class="nav-link">Архивные источники</a>
         </nav>
     </div>
 </header>
 
 <style>
-/* Стили для интеграции меню */
 body {
     margin: 0;
-    padding-top: 70px; /* Делает отступ сверху, чтобы карта не залезала под меню */
+    padding-top: 60px; /* Уменьшили высоту меню для мобильных */
     font-family: 'Georgia', serif;
     background-color: #fcfaf6;
 }
 
-/* Стили самого меню */
 .historical-header {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 70px;
-    background-color: #2b2621; /* Глубокий исторический темный цвет */
-    color: #f4ebd9; /* Цвет старой бумаги для текста */
+    height: 60px;
+    background-color: #2b2621;
+    color: #f4ebd9;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    z-index: 9999; /* Чтобы меню всегда было поверх карты QGIS */
-    border-bottom: 2px solid #8c6a42; /* Золотисто-бронзовый разделитель */
+    z-index: 9999;
+    border-bottom: 2px solid #8c6a42;
 }
 
 .header-container {
@@ -65,7 +71,7 @@ body {
     justify-content: space-between;
     align-items: center;
     height: 100%;
-    padding: 0 20px;
+    padding: 0 15px;
 }
 
 .header-logo {
@@ -74,7 +80,7 @@ body {
 }
 
 .logo-title {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     letter-spacing: 0.5px;
     color: #f4ebd9;
@@ -82,21 +88,21 @@ body {
 }
 
 .logo-subtitle {
-    font-size: 12px;
+    font-size: 11px;
     color: #a89a85;
     font-style: italic;
-    margin-top: 2px;
 }
 
+/* Навигация для ПК */
 .header-nav {
     display: flex;
-    gap: 25px;
+    gap: 20px;
 }
 
 .nav-link {
     color: #a89a85;
     text-decoration: none;
-    font-size: 15px;
+    font-size: 14px;
     transition: color 0.3s ease;
     padding: 5px 0;
     border-bottom: 1px solid transparent;
@@ -107,15 +113,99 @@ body {
     border-bottom: 1px solid #8c6a42;
 }
 
-/* Корректировка для карты qgis2web, чтобы она занимала все оставшееся место */
+/* Кнопка меню (скрыта на ПК) */
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.menu-toggle span {
+    width: 100%;
+    height: 2px;
+    background-color: #f4ebd9;
+    transition: all 0.3s ease;
+}
+
+/* Сдвиг карты QGIS под меню */
 #map {
     position: absolute;
-    top: 70px !important; /* Смещаем карту вниз ровно на высоту меню */
+    top: 60px !important;
     bottom: 0;
     width: 100%;
 }
+
+/* СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ */
+@media (max-width: 600px) {
+    .menu-toggle {
+        display: flex; /* Показываем кнопку на мобильных */
+    }
+
+    .header-nav {
+        display: none; /* Скрываем стандартное меню */
+        flex-direction: column;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        background-color: #2b2621;
+        border-top: 1px solid #8c6a42;
+        padding: 20px 0;
+        gap: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+
+    /* Класс, который будет добавляться при клике на гамбургер */
+    .header-nav.open {
+        display: flex;
+    }
+
+    .nav-link {
+        display: inline-block;
+        font-size: 16px;
+        padding: 10px 0;
+        width: 100%;
+    }
+    
+    /* Анимация превращения гамбургера в крестик */
+    .menu-toggle.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .menu-toggle.open span:nth-child(2) { opacity: 0; }
+    .menu-toggle.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+}
 </style>
-<!-- КОНЕЦ ВЕРХНЕГО МЕНЮ -->
+
+<script>
+// Функция для открытия/закрытия мобильного меню
+function toggleMenu() {
+    var nav = document.getElementById('header-nav');
+    var toggle = document.getElementById('menu-toggle');
+    nav.classList.toggle('open');
+    toggle.classList.toggle('open');
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Включаем клик по гамбургеру
+    document.getElementById('menu-toggle').addEventListener('click', toggleMenu);
+
+    // Подгрузка тайлов из QGIS
+    if (typeof map !== 'undefined') {
+        // !!! ВНИМАНИЕ: Если ваши тайлы в формате .png, замените ниже .jpg на .png !!!
+        L.tileLayer('map_tiles/{z}/{x}/{y}.jpg', {
+            minZoom: 12,
+            maxZoom: 16,
+            attribution: 'Горячие дни Средневолжского края'
+        }).addTo(map);
+    }
+});
+</script>
+<!-- КОНЕЦ АДАПТИВНОГО ИСТОРИЧЕСКОГО МЕНЮ И ТАЙЛОВ -->
         <div id="map">
         </div>
         <script src="js/qgis2web_expressions.js"></script>

@@ -900,6 +900,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }).addTo(map);
     }
 });
+   // 3. СИЛОВОЙ СБРОС БЛОКИРОВОК СКРОЛЛА ДЛЯ СМАРТФОНОВ
+    // Этот скрипт принудительно разрешает браузеру листать страницу при касании пальцем текста
+    window.addEventListener('touchmove', function(event) {
+        // Если палец движется НЕ по карте, а по тексту — разрешаем стандартный скролл сайта
+        if (!event.target.closest('#map')) {
+            event.stopPropagation();
+        }
+    }, { passive: true });
         </script>
     </body>
 </html>

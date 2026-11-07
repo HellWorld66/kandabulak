@@ -15,7 +15,7 @@
 	top: 0;
 	}
 .leaflet-container {
-	overflow: hidden;
+	overflow: visible !important;
 	}
 .leaflet-tile,
 .leaflet-marker-icon,

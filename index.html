@@ -17,195 +17,582 @@
             height: 433px;
         }
         </style>
-        <title></title>
-    </head>
-    <body>
-	<!-- НАЧАЛО АДАПТИВНОГО ИСТОРИЧЕСКОГО МЕНЮ И ТАЙЛОВ -->
-<header class="historical-header">
-    <div class="header-container">
-        <div class="header-logo">
-            <span class="logo-title">Горячие дни</span>
-            <span class="logo-subtitle">Средневолжского края</span>
-        </div>
+   <!-- Подключаем шрифт "Печатная машинка" (Courier Prime) -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <!-- Стили Leaflet (библиотека qgis2web) -->
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link rel="stylesheet" href="css/qgis2web.css">
+    <link rel="stylesheet" href="css/fontawesome-all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #121110;
+            --bg-card: #1c1a18;
+            --accent-gold: #c5a059;
+            --accent-red: #8b2518;
+            --text-paper: #dcd1bd;
+            --text-muted: #8e8472;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-paper);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* 1. Адаптивная шапка */
+        .historical-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background-color: var(--bg-card);
+            border-bottom: 2px solid var(--accent-gold);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            z-index: 9999;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 20px;
+        }
+
+        .header-logo { display: flex; flex-direction: column; }
+        .logo-title { font-size: 18px; font-weight: bold; color: var(--text-paper); text-transform: uppercase; letter-spacing: 1px; }
+        .logo-subtitle { font-size: 11px; color: var(--accent-gold); font-style: italic; }
+
+        .header-nav { display: flex; gap: 25px; }
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: color 0.3s ease;
+            padding: 5px 0;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--accent-gold); border-bottom: 2px solid var(--accent-gold); }
+
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 24px;
+            height: 18px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .menu-toggle span { width: 100%; height: 2px; background-color: var(--text-paper); transition: all 0.3s ease; }
+
+        /* 2. Секция интерактивной карты */
         
-        <!-- Кнопка гамбургера для мобильных -->
-        <button class="menu-toggle" id="menu-toggle" aria-label="Открыть меню">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-
-        <nav class="header-nav" id="header-nav">
-            <a href="#" class="nav-link active">Карта</a>
-            <a href="#" class="nav-link" onclick="toggleMenu(); alert('Проект посвящен переломным событиям в истории Среднего Поволжья.')">О проекте</a>
-            <a href="https://samregion.ru" target="_blank" class="nav-link">Архивные источники</a>
-        </nav>
-    </div>
-</header>
-
-<style>
-body {
-    margin: 0;
-    padding-top: 60px; /* Уменьшили высоту меню для мобильных */
-    font-family: 'Georgia', serif;
-    background-color: #fcfaf6;
-}
-
-.historical-header {
-    position: fixed;
-    top: 0;
-    left: 0;
+.map-section {
+    padding-top: 70px;
+    height: 60vh; /* Карта займет 60% высоты экрана смартфона/ПК */
     width: 100%;
-    height: 60px;
-    background-color: #2b2621;
-    color: #f4ebd9;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    z-index: 9999;
-    border-bottom: 2px solid #8c6a42;
+    position: sticky; /* Карта фиксируется на экране, пока мы не пролистаем её */
+    top: 0;
+    z-index: 5;
+    border-bottom: 2px solid var(--accent-gold);
 }
 
-.header-container {
-    max-width: 1200px;
+#map { 
+    width: 100%; 
+    height: 100%; 
+    background-color: #1a1a1a;
+    /* Убеждаемся, что стандартные жесты Leaflet работают */
+    touch-action: pan-x pan-y; 
+}
+
+.content-container {
+    max-width: 900px;
     margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 100%;
-    padding: 0 15px;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 10;
+    background-color: var(--bg-dark); /* Плотный фон, чтобы текст перекрывал карту при скролле */
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.8); /* Эффект наползания на карту */
 }
 
-.header-logo {
+        /* 3. Длинный контент сайта */
+        .content-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            position: relative;
+            z-index: 10; /* Поднимаем текст, чтобы он точно не уходил под карту */
+        }
+
+        .historical-stamp {
+            border: 2px dashed var(--accent-red);
+            padding: 15px;
+            display: inline-block;
+            text-transform: uppercase;
+            color: var(--accent-red);
+            font-weight: bold;
+            font-size: 14px;
+            transform: rotate(-2deg);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 26px;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--accent-gold);
+            padding-bottom: 10px;
+            margin-top: 50px;
+            margin-bottom: 25px;
+            letter-spacing: 1px;
+        }
+
+        p { margin-bottom: 20px; text-align: justify; color: var(--text-paper); font-size: 15px; }
+
+        .highlight-box {
+            background-color: var(--bg-card);
+            border-left: 4px solid var(--accent-red);
+            padding: 20px;
+            margin: 30px 0;
+            font-style: italic;
+        }
+
+        /* Контейнеры для фотографий в разделах */
+        .section-image-wrapper {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .section-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--accent-gold);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .image-caption {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 7px;
+        }
+
+        /* 4. Раздел "История в лицах" */
+        .biography-block {
+            display: flex;
+            gap: 30px;
+            background-color: var(--bg-card);
+            border: 1px solid #2d2925;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            align-items: flex-start;
+        }
+
+        .praded-photo {
+            width: 220px;
+            height: auto;
+            object-fit: cover;
+            border: 2px solid var(--accent-gold);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+        }
+
+        .bio-text { flex-grow: 1; }
+        .bio-name { font-size: 20px; font-weight: bold; color: var(--text-paper); margin-bottom: 5px; }
+        .bio-rank { font-size: 13px; color: var(--accent-gold); text-transform: uppercase; margin-bottom: 15px; }
+
+        footer {
+            background-color: var(--bg-card);
+            border-top: 1px solid #2d2925;
+            padding: 30px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle { display: flex; }
+            .header-nav {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                width: 100%;
+                background-color: var(--bg-card);
+                border-top: 1px solid var(--accent-gold);
+                padding: 20px 0;
+                gap: 15px;
+                text-align: center;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            }
+            .header-nav.open { display: flex; }
+            .nav-link { display: block; width: 100%; padding: 10px 0; }
+            
+            .biography-block { flex-direction: column; align-items: center; text-align: center; }
+            .praded-photo { width: 100%; max-width: 240px; }
+            p { text-align: left; }
+            h2 { font-size: 20px; }
+            .logo-title { font-size: 14px; }
+        }
+		/* Новые стили для страницы книги */
+.book-page-block {
+    margin-top: 50px;
+    padding-bottom: 30px;
+}
+
+.book-flex-container {
+    display: flex;
+    gap: 40px;
+    margin-top: 25px;
+    align-items: flex-start;
+}
+
+.book-photo-wrapper {
+    flex-shrink: 0;
+    width: 300px; /* Фиксированная ширина для фото книги */
+}
+
+.book-photo-placeholder {
+    width: 100%;
+    height: 400px;
+    background-color: #171614;
+    border: 2px dashed var(--accent-gold);
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
 }
 
-.logo-title {
-    font-size: 16px;
+.book-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.book-placeholder-text {
+    font-size: 13px;
     font-weight: bold;
-    letter-spacing: 0.5px;
-    color: #f4ebd9;
+    color: var(--text-paper);
     text-transform: uppercase;
 }
 
-.logo-subtitle {
-    font-size: 11px;
-    color: #a89a85;
+.book-size-hint {
+    font-size: 10px;
+    color: var(--accent-gold);
+    margin-top: 10px;
+}
+
+.book-actual-img {
+    width: 100%;
+    height: auto;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+}
+
+.book-description-text {
+    flex-grow: 1;
+}
+
+.document-meta {
+    background-color: var(--bg-card);
+    border: 1px solid #2d2925;
+    padding: 15px;
+    font-size: 13px;
+    margin-bottom: 25px;
+    color: var(--text-paper);
+    border-left: 3px solid var(--accent-gold);
+}
+
+.inscription-quote {
+    background-color: #1c1410;
+    border: 1px dashed var(--accent-red);
+    padding: 20px;
+    margin: 25px 0;
     font-style: italic;
-}
-
-/* Навигация для ПК */
-.header-nav {
-    display: flex;
-    gap: 20px;
-}
-
-.nav-link {
-    color: #a89a85;
-    text-decoration: none;
     font-size: 14px;
-    transition: color 0.3s ease;
-    padding: 5px 0;
-    border-bottom: 1px solid transparent;
+    color: #ebdcb9;
+    line-height: 1.5;
 }
 
-.nav-link:hover, .nav-link.active {
-    color: #f4ebd9;
-    border-bottom: 1px solid #8c6a42;
-}
-
-/* Кнопка меню (скрыта на ПК) */
-.menu-toggle {
-    display: none;
-    flex-direction: column;
-    justify-content: space-between;
-    width: 24px;
-    height: 18px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-}
-
-.menu-toggle span {
-    width: 100%;
-    height: 2px;
-    background-color: #f4ebd9;
-    transition: all 0.3s ease;
-}
-
-/* Сдвиг карты QGIS под меню */
-#map {
-    position: absolute;
-    top: 60px !important;
-    bottom: 0;
-    width: 100%;
-}
-
-/* СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ */
-@media (max-width: 600px) {
-    .menu-toggle {
-        display: flex; /* Показываем кнопку на мобильных */
-    }
-
-    .header-nav {
-        display: none; /* Скрываем стандартное меню */
+/* Адаптивность для мобильных (добавьте внутрь вашего существующего @media кода) */
+@media (max-width: 768px) {
+    .book-flex-container {
         flex-direction: column;
-        position: absolute;
-        top: 60px;
-        left: 0;
+        align-items: center;
+    }
+    .book-photo-wrapper {
         width: 100%;
-        background-color: #2b2621;
-        border-top: 1px solid #8c6a42;
-        padding: 20px 0;
-        gap: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        max-width: 280px;
+    }
+    .book-photo-placeholder {
+        height: 350px;
+    }
+}
+/* Стили для раздела "История в лицах" */
+.faces-page-block {
+    margin-top: 50px;
+    padding-bottom: 20px;
+}
+
+.biography-card {
+    display: flex;
+    gap: 35px;
+    background-color: var(--bg-card);
+    border: 1px solid #2d2925;
+    padding: 30px;
+    margin-top: 25px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    align-items: flex-start;
+}
+
+.profile-photo-wrapper {
+    flex-shrink: 0;
+    width: 220px; /* Идеальная пропорция для портрета */
+}
+
+.profile-photo-placeholder {
+    width: 100%;
+    height: 290px;
+    background-color: #171614;
+    border: 2px dashed var(--accent-gold);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 15px;
+    color: var(--text-muted);
+}
+
+.profile-icon {
+    font-size: 55px;
+    margin-bottom: 10px;
+    opacity: 0.4;
+}
+
+.profile-placeholder-text {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-paper);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-size-hint {
+    font-size: 9px;
+    color: var(--accent-gold);
+    margin-top: 8px;
+}
+
+.profile-actual-img {
+    width: 100%;
+    height: auto;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+}
+
+.profile-info-text {
+    flex-grow: 1;
+}
+
+.profile-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--text-paper);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.profile-badge {
+    font-size: 12px;
+    color: var(--accent-red);
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.profile-location {
+    font-size: 13px;
+    color: var(--accent-gold);
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+.profile-dossier {
+    background-color: #121110;
+    border-left: 3px solid var(--accent-red);
+    padding: 15px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.profile-summary {
+    font-size: 14px;
+    text-align: justify;
+    color: #bfae93;
+}
+
+/* Мобильная адаптивность для портрета */
+@media (max-width: 768px) {
+    .biography-card {
+        flex-direction: column;
+        align-items: center;
         text-align: center;
+        padding: 20px;
     }
-
-    /* Класс, который будет добавляться при клике на гамбургер */
-    .header-nav.open {
-        display: flex;
-    }
-
-    .nav-link {
-        display: inline-block;
-        font-size: 16px;
-        padding: 10px 0;
+    .profile-photo-wrapper {
         width: 100%;
+        max-width: 200px;
+        margin-bottom: 15px;
     }
-    
-    /* Анимация превращения гамбургера в крестик */
-    .menu-toggle.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-    .menu-toggle.open span:nth-child(2) { opacity: 0; }
-    .menu-toggle.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-}
-</style>
-
-<script>
-// Функция для открытия/закрытия мобильного меню
-function toggleMenu() {
-    var nav = document.getElementById('header-nav');
-    var toggle = document.getElementById('menu-toggle');
-    nav.classList.toggle('open');
-    toggle.classList.toggle('open');
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-    // Включаем клик по гамбургеру
-    document.getElementById('menu-toggle').addEventListener('click', toggleMenu);
-
-    // Подгрузка тайлов из QGIS
-    if (typeof map !== 'undefined') {
-        // !!! ВНИМАНИЕ: Если ваши тайлы в формате .png, замените ниже .jpg на .png !!!
-        L.tileLayer('map_tiles/{z}/{x}/{y}.jpg', {
-            minZoom: 12,
-            maxZoom: 16,
-            attribution: 'Горячие дни Средневолжского края'
-        }).addTo(map);
+    .profile-photo-placeholder {
+        height: 260px;
     }
-});
-</script>
-<!-- КОНЕЦ АДАПТИВНОГО ИСТОРИЧЕСКОГО МЕНЮ И ТАЙЛОВ -->
+    .profile-dossier {
+        text-align: left;
+    }
+    .profile-summary {
+        text-align: left;
+    }
+}
+    </style>
+        <title></title>
+    </head>
+    <body>
+    <!-- 1. Верхняя панель (Навигация) -->
+    <header class="historical-header">
+        <div class="header-container">
+            <div class="header-logo">
+                <span class="logo-title">Горячие дни</span>
+                <span class="logo-subtitle">Средневолжского края</span>
+            </div>
+            <button class="menu-toggle" id="menu-toggle">
+                <span></span><span></span><span></span>
+            </button>
+            <nav class="header-nav" id="header-nav">
+                <a href="#map-anchor" class="nav-link">Карта</a>
+                <a href="#mts-anchor" class="nav-link">Кандабулакская МТС</a>
+                <a href="#book-anchor" class="nav-link">Экземпляр книги</a>
+                <a href="#faces-anchor" class="nav-link">История в лицах</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 2. Блок Интерактивной Карты QGIS -->
+    <div class="map-section" id="map-anchor">
+        <div id="map"></div>
+    </div>
+
+    <!-- 3. Основной исторический лонгрид -->
+    <div class="content-container">
+        
+        <div class="historical-stamp">Секретно. Политотдел МТС</div>
+
+        <!-- Раздел 1. Про Политотделы и Кандабулакскую МТС -->
+        <div id="mts-anchor">
+            <h2>Особая роль политотделов и Кандабулакская МТС</h2>
+            <p>В первой половине 1930-х годов Машинно-тракторные станции (МТС) стали ключевыми узлами радикальной модернизации и коллективизации советской деревни во всём Советском союзе. Средневолжский край не стал исключением.Постановлением ЦК ВКП(б) от 11 января 1933 года при МТС были созданы чрезвычайные органы партийного контроля - политотделы.</p>
+            
+            <p>Политотделы МТС выполняли функции жесткого государственного и идеологического регулирования. Они беспощадно боролись с саботажем хлебозаготовок, очищали колхозы от «антисоветских элементов», занимались организацией соцсоревнований и ковали новые лояльные кадры из местных трактористов и ударников. Кандабулакская МТС (территория современной Самарской области) являлась одним из передовых опорных пунктов этой внутренней битвы за хлеб, модернизацию и строение новой эпохи.</p>
+            
+            <!-- Фотография к разделу МТС -->
+            <div class="section-image-wrapper">
+                <img src="elan.jpg" alt="Кандабулакская МТС" class="section-image">
+                <div class="image-caption">Работа политотдела Еланицкой МТС с механизаторами (Одесская обл.)</div>
+            </div>
+
+            <div class="highlight-box">
+			  <!-- НАЧАЛО РАСШИРЕННОГО БЛОКА: ЭКЗЕМПЛЯР КНИГИ -->
+        <div id="book-anchor" class="book-page-block">
+            <h2>Артефакт эпохи: Экземпляр книги «Горячие дни»</h2>
+            
+            <div class="book-flex-container">
+                <!-- Место для фотографии книги/инскрипта -->
+                <div class="book-photo-wrapper">
+                    <!-- Заглушка. Когда сделаете фото, замените этот блок <div> на: <img src="book.jpg" class="book-actual-img"> -->
+					<img src="obl.jpg" alt="Инскрипт Александра Савватеева" class="book-actual-img">
+                </div>
+
+                <!-- Подробное историческое описание -->
+                <div class="book-description-text">
+                    <div class="document-meta">
+                        <strong>Документ:</strong> Историческая монография / Особый экземпляр<br>
+                        <strong>Автор:</strong> Савватеев Александр<br>
+                        <strong>Год издания:</strong> 1934г. (по горячим следам событий)<br>
+                        <strong>Статус:</strong> Семейная реликвия / Источниковедческий артефакт
+                    </div>
+
+                    <p>Перед вами не просто печатное издание, а уникальный свидетель «великого перелома». Книга Александра Савватеева «Горячие дни» создавалась как хроника жесточайшего противостояния в советской деревне периода коллективизации и борьбы за выполнение планов.</p>
+                    
+                    <p>Главная ценность данного конкретного экземпляра сосредоточена на его <strong>форзаце</strong>. Размашистым почерком чернильной ручкой начертан подлинный <strong>инскрипт (дарственная надпись)</strong> автора. Александр Савватеев лично вручил эту книгу моему прадеду Василию, занимавшему пост заместителя начальника политотдела Кандабулакской МТС по партийно-массовой работе.</p>
+					<img src="insc.jpg" alt="Инскрипт Александра Савватеева" class="book-actual-img">
+                    <div class="inscription-quote">
+                        <strong>Текст инскрипта:</strong><br>
+                        «Герою моей книжки Василию Фёдоровичу Великанову на память о "горячих днях" с искренними пожеланиями Александр Савватеев»
+                    </div>
+
+                    <p>Именно этот экземпляр доказывает, что коллективизация проводилась реальными людьми, связанными крепкими узами личного доверия и общей идейной борьбы, проходившими через экстремальные условия Средневолжского края.</p>
+                </div>
+            </div>
+        </div>
+		  <!-- НАЧАЛО БЛОКА: ИСТОРИЯ В ЛИЦАХ -->
+        <div id="faces-anchor" class="faces-page-block">
+            <h2>История в лицах</h2>
+            
+            <div class="biography-card">
+                <!-- Портрет прадеда -->
+                <div class="profile-photo-wrapper">
+                    <!-- Заглушка для фото. Когда добавите файл praded.jpg, замените этот блок <div> на: <img src="praded.jpg" class="profile-actual-img"> -->
+                    <div class="profile-photo-placeholder">
+                        <img src="Velikanov.jpg" alt="Василий Федорович Великанов" class="profile-actual-img">
+                    </div>
+                </div>
+
+                <!-- Краткая анкета и биография -->
+                <div class="profile-info-text">
+                    <div class="profile-name">ВАСИЛИЙ ФЕДОРОВИЧ ВЕЛИКАНОВ</div>
+                    <div class="profile-badge">Зам. начальника политотдела по партийно-массовой работе.</div>
+                    <div class="profile-location">Кандабулакская МТС, Средневолжский край</div>
+                    
+                    <div class="profile-dossier">
+                        <strong>Период службы:</strong> 1920-е - 1950-е<br>
+                        <strong>Ключевая задача:</strong> агитация среди населения, контроль за порядком в деревне.<br>
+                        <strong>Особые отметки:</strong> отмечен личным памятным знаком и книгой А. Савватеева «Горячие дни» с авторским инскриптом за ликвидацию прорывов на аграрном фронте. Персональный пенсионер республиканского значения.
+                    </div>
+
+                    <p class="profile-summary">
+                        Василий Федорович являлся одним из тех, кто на стыке эпох создавал новую деревню, деревню нового советского человека. Работая в политотделе Кандабулакской МТС, он напрямую работал с крестьянами, решал проблемы, вскрывал саботаж на местах. Во время Великой Отечественной войны был политруком. Получил орден Красной Звезды. Именно такие люди поднимали солдатам боевой дух.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <!-- КОНЕЦ БЛОКА: ИСТОРИЯ В ЛИЦАХ -->
+        <!-- КОНЕЦ РАСШИРЕННОГО БЛОКА: ЭКЗЕМПЛЯР КНИГИ -->
         <div id="map">
         </div>
         <script src="js/qgis2web_expressions.js"></script>
@@ -479,6 +866,40 @@ document.addEventListener("DOMContentLoaded", function() {
             }  
         });       
         setBounds();
+		// Полностью замените блок мобильного меню внизу index.html на этот код:
+document.addEventListener("DOMContentLoaded", function() {
+    var menuToggle = document.getElementById('menu-toggle');
+    var headerNav = document.getElementById('header-nav');
+    
+    if (menuToggle && headerNav) {
+        menuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            headerNav.classList.toggle('open');
+            menuToggle.classList.toggle('open');
+        });
+    }
+
+    var navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+            headerNav.classList.remove('open');
+            menuToggle.classList.remove('open');
+        });
+    });
+
+    // Интеграция XYZ-тайлов из QGIS
+    if (typeof map !== 'undefined') {
+        // !!! СТРОКУ map.dragging.disable() УДАЛИЛИ, ЧТОБЫ КАРТА СНОВА ДВИГАЛАСЬ !!!
+        map.dragging.enable(); 
+
+        L.tileLayer('map_tiles/{z}/{x}/{y}.jpg', {
+            minZoom: 12,
+            maxZoom: 16,
+            attribution: 'Историческая подложка: Кандабулакская МТС'
+        }).addTo(map);
+    }
+});
         </script>
     </body>
 </html>
